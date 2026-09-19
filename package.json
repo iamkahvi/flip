@@ -1,0 +1,10 @@
+{
+  "name": "newsletter-image-viewer",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "sync-assets": "bash scripts/sync-assets.sh",
+    "test": "node scripts/test.mjs"
+  }
+}
