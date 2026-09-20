@@ -18,18 +18,21 @@ Use these tools to develop or update flip:
 
 The image list is a JSON manifest at an HTTP or HTTPS URL. This URL is the source of truth for flip.
 
-The manifest must contain an array. Each item must have an HTTP or HTTPS image URL. An item can also have a caption.
+The manifest must contain an `images` array. It can also contain a title. flip uses the title for the browser page title. If the manifest has no title, flip uses `flipbook`. Each image item must have an HTTP or HTTPS image URL. An item can also have a caption.
 
 ```json
-[
-  {
-    "url": "https://images.example.com/covers/image-001.jpg",
-    "caption": "Caption text"
-  },
-  {
-    "url": "https://images.example.com/image-002.png"
-  }
-]
+{
+  "title": "Image collection",
+  "images": [
+    {
+      "url": "https://images.example.com/covers/image-001.jpg",
+      "caption": "Caption text"
+    },
+    {
+      "url": "https://images.example.com/image-002.png"
+    }
+  ]
+}
 ```
 
 Use only these image types:
@@ -106,26 +109,6 @@ Use these controls in normal mode:
 | Enter or leave full-screen mode | `F` |
 
 The URL fragment identifies the current image. For example, `#3` opens the third image. You can bookmark or share this URL.
-
-## Edit captions
-
-Caption mode lets you create or change captions in your browser. Open flip with `mode=caption` before the image fragment:
-
-```text
-http://localhost:8000/?mode=caption#1
-```
-
-Use these controls in caption mode:
-
-| Action | Control |
-| --- | --- |
-| Edit the caption for the current image | `C` |
-| Save the caption and leave the edit field | `Esc` |
-| Download the current manifest and captions | `Ctrl+S` or `Cmd+S` |
-
-flip saves edits in browser local storage. The edits stay in that browser until you remove them. They do not change the manifest URL.
-
-`Ctrl+S` or `Cmd+S` downloads a manifest file. Publish this file at your manifest URL to publish the captions. You do not need to build `index.html` again.
 
 A caption appears in the bottom-left corner of the image. The caption text has a white background. Long captions wrap inside the viewport.
 

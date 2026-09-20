@@ -30,10 +30,16 @@ try {
   throw new Error(`Could not read manifest ${manifestUrl.href}: ${error.message}`);
 }
 
-if (!Array.isArray(manifest)) {
-  throw new Error("Manifest must be an array of image entries");
+if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
+  throw new Error("Manifest must be an object");
 }
-for (const [index, entry] of manifest.entries()) {
+if (Object.hasOwn(manifest, "title") && typeof manifest.title !== "string") {
+  throw new Error("Manifest title must be a string");
+}
+if (!Array.isArray(manifest.images)) {
+  throw new Error("Manifest images must be an array");
+}
+for (const [index, entry] of manifest.images.entries()) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new Error(`Manifest entry ${index + 1} must be an object`);
   }
