@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#111111" />
-    <title>Newsletter assets</title>
+    <title>flip</title>
     <style>
 :root {
   color-scheme: dark;
@@ -121,7 +121,7 @@ body {
     </style>
   </head>
   <body>
-    <main id="viewer" class="viewer" aria-label="Newsletter asset viewer">
+    <main id="viewer" class="viewer" aria-label="flip image viewer">
       <div class="image-stage">
         <img id="image" class="image" alt="" />
       </div>
@@ -139,7 +139,7 @@ const caption = document.querySelector("#caption");
 const captionText = document.querySelector("#caption-text");
 const captionInput = document.querySelector("#caption-input");
 const defaultManifestUrl = __MANIFEST_URL__;
-const manifestStorageKey = "newsletter-image-viewer:manifest-url";
+const manifestStorageKey = "flip:manifest-url";
 const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 let assets = [];
 let captions = {};
@@ -164,7 +164,7 @@ function isSupportedAssetUrl(url) {
 }
 
 const manifestUrl = configuredManifestUrl();
-const captionsStorageKey = "newsletter-image-viewer:captions";
+const captionsStorageKey = "flip:captions";
 const localCaptions = captionMode ? loadCaptions() : {};
 let currentIndex = 0;
 let isEditingCaption = false;

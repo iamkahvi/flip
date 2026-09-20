@@ -1,14 +1,49 @@
-# Newsletter image viewer
+# flip
 
-A single-file static viewer for every image in the R2 `newsletter-assets/` prefix.
+flip displays the images in a newsletter manifest.
 
-`index.html` contains all viewer HTML, CSS, and JavaScript in one file. It loads a JSON manifest at runtime, so deploy that manifest alongside the viewer (or build with a manifest URL). Updating the manifest changes the viewer after reload without rebuilding `index.html`.
+It is a static web application. It uses one HTML file and one JSON manifest file. flip loads the manifest when the page opens. You can change the manifest without building the HTML file again.
 
-It displays the original CDN object without cropping or resizing. Tap the left or right half of the screen to move backward or forward on touch devices; use the left/right arrow keys or `H`/`L` on a keyboard. `Home` and `End` jump to the first and last images; `F` toggles fullscreen. The current image is reflected in the URL fragment, so a view can be shared or bookmarked.
+flip shows the complete image. It does not crop or resize the image.
 
-## Add a subtitle
+## Requirements
 
-The deployed viewer runs in **production mode** by default. Its source of truth is [`manifest.json`](manifest.json), which lists CDN image URLs and optionally their captions:
+Use these tools to develop or update the application:
+
+- Bun, to run the application and its tests
+- Node.js, to build `index.html`
+- Python 3, to run the local web server
+- rclone, to update the R2 asset list
+
+You need rclone access to the R2 bucket only when you run `sync-assets`.
+
+## Run flip locally
+
+Start a local web server:
+
+```sh
+bun run dev
+```
+
+Open <http://localhost:8000> in a browser.
+
+## Use flip
+
+Use these controls in normal mode:
+
+| Action | Control |
+| --- | --- |
+| Show the previous image | Left Arrow, `H`, or tap the left half of the screen |
+| Show the next image | Right Arrow, `L`, or tap the right half of the screen |
+| Show the first image | `Home` |
+| Show the last image | `End` |
+| Enter or leave full-screen mode | `F` |
+
+The URL fragment identifies the current image. For example, `#3` opens the third image. You can bookmark or share this URL.
+
+## Set the image list
+
+`manifest.json` is the default image list. The file must contain an array. Each item must have an HTTP or HTTPS image URL. An item can also have a caption.
 
 ```json
 [
@@ -22,68 +57,113 @@ The deployed viewer runs in **production mode** by default. Its source of truth 
 ]
 ```
 
-Build `index.html` configured to load a local manifest:
+Use only these image types:
 
-```sh
-npm run build
-# or: npm run build -- path/to/manifest.json
-```
+- AVIF
+- GIF
+- JPEG or JPG
+- PNG
+- SVG
+- WebP
 
-A manifest URL is also accepted and is embedded as the runtime source:
+The build command stops if the manifest has another image type. flip ignores unsupported items when it loads a manifest.
 
-```sh
-npm run build -- https://example.com/manifest.json
-```
+In normal mode, flip reads captions from the loaded manifest. It does not provide controls to change them.
 
-Pass a second argument to write to a different output path:
+## Set the manifest source
 
-```sh
-node scripts/build.mjs manifest.json dist/index.html
-```
+flip selects its manifest source in this order:
 
-### Manifest overrides and asset validation
+1. The `manifest` URL parameter.
+2. The `flip:manifest-url` value in browser local storage.
+3. The manifest URL set when you build `index.html`.
 
-The viewer resolves its runtime manifest in this order: a `manifest` URL query parameter, `localStorage["newsletter-image-viewer:manifest-url"]`, then the URL configured at build time. For example:
+For example, this URL loads a manifest from another server:
 
 ```text
 https://viewer.example/?manifest=https%3A%2F%2Fcdn.example%2Fmanifest.json
 ```
 
-To persist an override in the current browser, run this in its developer console and reload:
+To save a manifest URL in the current browser, run this command in the browser developer console. Then reload the page.
 
 ```js
-localStorage.setItem("newsletter-image-viewer:manifest-url", "https://cdn.example/manifest.json")
+localStorage.setItem("flip:manifest-url", "https://cdn.example/manifest.json")
 ```
 
-Only `.avif`, `.gif`, `.jpeg`, `.jpg`, `.png`, `.svg`, and `.webp` assets are accepted. The build command rejects other types, and the viewer skips unsupported entries at runtime, so formats such as `.heic` are not shown.
+## Build flip
 
-Production mode has no caption-editing controls; the manifest loaded at runtime is its source of truth.
+`index.template.html` is the build template. The build command checks the manifest, then writes a standalone `index.html`. The built file loads the manifest at run time.
 
-### Caption mode
-
-Open the viewer with `?mode=caption` before its image fragment—for example, `http://localhost:8000/?mode=caption#1`. Press `C` to replace the rendered caption with an inline text box in the same bottom-left position. Type a caption and press `Esc` to save it in the browser’s local storage and return to the normal caption display. Press `Ctrl+S` (or `Cmd+S`) to save the current caption and download a `manifest.json` export; replace the deployed manifest with it to publish those captions—no rebuild is required.
-
-When present, a caption is overlaid in the image’s bottom-left corner in smaller black monospace text. Only the text itself has a white background; there is no surrounding panel or padding. Long captions wrap within the viewport.
-
-## Run locally
+Build with the local manifest:
 
 ```sh
-bun run dev
+npm run build
 ```
 
-Open <http://localhost:8000>.
+Build with another local manifest:
 
-## Refresh the inline R2 inventory
+```sh
+npm run build -- path/to/manifest.json
+```
 
-The public CDN intentionally does not provide directory listing. Regenerate the asset list from the authenticated local `rclone` R2 remote whenever objects are added or removed:
+Build with a remote manifest:
+
+```sh
+npm run build -- https://example.com/manifest.json
+```
+
+To set both the manifest source and output file, run the build script directly:
+
+```sh
+node scripts/build.mjs manifest.json dist/index.html
+```
+
+Deploy the built `index.html` and its local manifest together. A remote manifest does not need to be deployed with flip.
+
+## Edit captions
+
+Caption mode lets you create or change captions in your browser. Open flip with `mode=caption` before the image fragment:
+
+```text
+http://localhost:8000/?mode=caption#1
+```
+
+Use these controls in caption mode:
+
+| Action | Control |
+| --- | --- |
+| Edit the caption for the current image | `C` |
+| Save the caption and leave the edit field | `Esc` |
+| Download the current manifest and captions | `Ctrl+S` or `Cmd+S` |
+
+flip saves edits in browser local storage. The edits stay in that browser until you remove them. They do not change the deployed manifest.
+
+`Ctrl+S` or `Cmd+S` downloads a `manifest.json` file. Deploy this file to publish the captions. You do not need to build `index.html` again.
+
+A caption appears in the bottom-left corner of the image. The caption text has a white background. Long captions wrap inside the viewport.
+
+## Update the R2 asset list
+
+Run this command after you add or remove objects in R2:
 
 ```sh
 bun run sync-assets
 ```
 
-The command lists `r2:newsletter-bucket/newsletter-assets` and updates `manifest.json` while retaining captions for unchanged URLs. A deployed viewer picks up the new manifest after reload; rebuilding `index.html` is not required. It accepts `R2_REMOTE`, `R2_BUCKET`, `R2_PREFIX`, and `CDN_BASE_URL` overrides.
+The command lists files in `r2:newsletter-bucket/newsletter-assets`. It updates `manifest.json` and keeps captions for URLs that still exist. The public CDN does not list its files, so this command uses your authenticated rclone R2 remote.
 
-## Verify
+You can change the R2 or CDN settings with these environment variables:
+
+- `R2_REMOTE`
+- `R2_BUCKET`
+- `R2_PREFIX`
+- `CDN_BASE_URL`
+
+The deployed flip application uses the new manifest after the next page reload. You do not need to build `index.html` again.
+
+## Test the application
+
+Run the checks:
 
 ```sh
 bun run test
