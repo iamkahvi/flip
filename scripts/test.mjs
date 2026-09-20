@@ -1,14 +1,15 @@
-import { readFile } from "node:fs/promises";
-
-const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
-const template = await readFile(new URL("../index.template.html", import.meta.url), "utf8");
-const build = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
+const html = await Bun.file(new URL("../index.html", import.meta.url)).text();
+const template = await Bun.file(new URL("../index.template.html", import.meta.url)).text();
+const build = await Bun.file(new URL("./build.mjs", import.meta.url)).text();
+const devServer = await Bun.file(new URL("./dev.mjs", import.meta.url)).text();
+const packageConfig = JSON.parse(await Bun.file(new URL("../package.json", import.meta.url)).text());
 
 for (const marker of [
   "<style>",
   "<title>flipbook</title>",
   "object-fit: contain",
-  "const defaultManifestUrl = null",
+  "const defaultManifestUrl =",
+  "Array.isArray(loadedManifest) ? { images: loadedManifest } : loadedManifest",
   "const defaultPageTitle = \"flipbook\"",
   "let manifestTitle = defaultPageTitle;",
   "function configuredManifestUrl()",
@@ -41,8 +42,18 @@ for (const marker of ["caption-input", "captionMode", "localCaptions", "exportMa
   if (html.includes(marker)) throw new Error(`Caption editing code must not include ${marker}`);
 }
 
+for (const [name, command] of Object.entries(packageConfig.scripts)) {
+  if (!command.startsWith("bun ")) {
+    throw new Error(`${name} must run with Bun, not another runtime`);
+  }
+}
+for (const marker of ["const indexFile = Bun.file", "Bun.serve({", "pathname === \"/\""]) {
+  if (!devServer.includes(marker)) throw new Error(`Missing ${marker} from scripts/dev.mjs`);
+}
+
 for (const marker of [
   "Build requires an HTTP(S) manifest URL",
+  "Array.isArray(loadedManifest) ? { images: loadedManifest } : loadedManifest",
   'throw new Error("Manifest title must be a string")',
   "for (const [index, entry] of manifest.images.entries())",
   "const response = await fetch(manifestUrl)",

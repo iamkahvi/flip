@@ -1,6 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
-
 const [manifestSource, outputPath = "index.html"] = process.argv.slice(2);
 const templatePath = new URL("../index.template.html", import.meta.url);
 const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
@@ -25,13 +22,14 @@ try {
   if (!response.ok) {
     throw new Error(`${response.status} ${response.statusText}`);
   }
-  manifest = await response.json();
+  const loadedManifest = await response.json();
+  manifest = Array.isArray(loadedManifest) ? { images: loadedManifest } : loadedManifest;
 } catch (error) {
   throw new Error(`Could not read manifest ${manifestUrl.href}: ${error.message}`);
 }
 
 if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
-  throw new Error("Manifest must be an object");
+  throw new Error("Manifest must be an object or an array");
 }
 if (Object.hasOwn(manifest, "title") && typeof manifest.title !== "string") {
   throw new Error("Manifest title must be a string");
@@ -54,13 +52,12 @@ for (const [index, entry] of manifest.images.entries()) {
   }
 }
 
-const template = await readFile(templatePath, "utf8");
+const template = await Bun.file(templatePath).text();
 const placeholder = "__MANIFEST_URL__";
 if (!template.includes(placeholder)) {
   throw new Error("Template is missing the manifest URL placeholder");
 }
 
-const resolvedOutputPath = resolve(outputPath);
 const html = template.replace(placeholder, JSON.stringify(manifestUrl.href));
-await writeFile(resolvedOutputPath, html);
-console.log(`Built ${resolvedOutputPath}; it will load ${manifestUrl.href} at runtime`);
+await Bun.write(outputPath, html);
+console.log(`Built ${outputPath}; it will load ${manifestUrl.href} at runtime`);

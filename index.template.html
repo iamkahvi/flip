@@ -144,9 +144,10 @@ async function loadManifest() {
   const response = await fetch(manifestUrl, { cache: "no-store" });
   if (!response.ok) throw new Error(`Could not load manifest: ${response.status} ${response.statusText}`);
 
-  const manifest = await response.json();
+  const loadedManifest = await response.json();
+  const manifest = Array.isArray(loadedManifest) ? { images: loadedManifest } : loadedManifest;
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
-    throw new Error("Manifest must be an object");
+    throw new Error("Manifest must be an object or an array");
   }
   if (Object.hasOwn(manifest, "title") && typeof manifest.title !== "string") {
     throw new Error("Manifest title must be a string");

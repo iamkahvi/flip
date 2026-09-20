@@ -3,8 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "python3 -m http.server 8000",
-    "build": "node scripts/build.mjs",
-    "test": "node scripts/test.mjs"
+    "dev": "bun scripts/dev.mjs",
+    "build": "bun scripts/build.mjs",
+    "test": "bun scripts/test.mjs"
   }
 }
