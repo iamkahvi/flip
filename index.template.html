@@ -138,10 +138,32 @@ const position = document.querySelector("#position");
 const caption = document.querySelector("#caption");
 const captionText = document.querySelector("#caption-text");
 const captionInput = document.querySelector("#caption-input");
-const manifestUrl = __MANIFEST_URL__;
+const defaultManifestUrl = __MANIFEST_URL__;
+const manifestStorageKey = "newsletter-image-viewer:manifest-url";
+const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 let assets = [];
 let captions = {};
 const captionMode = new URLSearchParams(window.location.search).get("mode") === "caption";
+
+function configuredManifestUrl() {
+  const fromQuery = new URLSearchParams(window.location.search).get("manifest");
+  if (fromQuery) return fromQuery;
+  try {
+    return localStorage.getItem(manifestStorageKey) || defaultManifestUrl;
+  } catch {
+    return defaultManifestUrl;
+  }
+}
+
+function isSupportedAssetUrl(url) {
+  try {
+    return supportedAssetExtensions.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
+const manifestUrl = configuredManifestUrl();
 const captionsStorageKey = "newsletter-image-viewer:captions";
 const localCaptions = captionMode ? loadCaptions() : {};
 let currentIndex = 0;
@@ -178,6 +200,10 @@ async function loadManifest() {
   for (const [index, entry] of manifest.entries()) {
     if (!entry || typeof entry !== "object" || typeof entry.url !== "string") {
       throw new Error(`Invalid manifest entry ${index + 1}`);
+    }
+    if (!isSupportedAssetUrl(entry.url)) {
+      console.warn(`Skipping unsupported image URL: ${entry.url}`);
+      continue;
     }
     if (Object.hasOwn(entry, "caption") && typeof entry.caption !== "string") {
       throw new Error(`Invalid caption for manifest entry ${index + 1}`);

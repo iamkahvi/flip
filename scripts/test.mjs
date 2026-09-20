@@ -9,7 +9,9 @@ const template = await readFile(new URL("../index.template.html", import.meta.ur
 for (const marker of [
   "<style>",
   "object-fit: contain",
-  'const manifestUrl = "manifest.json"',
+  'const defaultManifestUrl = "manifest.json"',
+  "function configuredManifestUrl()",
+  "function isSupportedAssetUrl(url)",
   "let assets = []",
   "fetch(manifestUrl, { cache: \"no-store\" })",
   "const captionMode = new URLSearchParams",
@@ -68,9 +70,9 @@ for (const marker of ["padding: 0", "background: #fff", "field-sizing: content"]
   }
 }
 
-const manifestUrlMatch = html.match(/const manifestUrl = (.*?);/);
+const manifestUrlMatch = html.match(/const defaultManifestUrl = (.*?);/);
 if (!manifestUrlMatch || JSON.parse(manifestUrlMatch[1]) !== "manifest.json") {
-  throw new Error("index.html must load the local manifest.json at runtime");
+  throw new Error("index.html must default to the local manifest.json at runtime");
 }
 if (!Array.isArray(sourceManifest) || sourceManifest.length === 0) {
   throw new Error("manifest.json must be a non-empty array");
@@ -85,6 +87,9 @@ for (const [index, entry] of sourceManifest.entries()) {
     throw new Error(`Manifest entry ${index + 1} must have a unique URL`);
   }
   const parsed = new URL(entry.url);
+  if (!/\.(avif|gif|jpe?g|png|svg|webp)$/i.test(parsed.pathname)) {
+    throw new Error(`Unsupported manifest asset type: ${entry.url}`);
+  }
   if (parsed.origin !== "https://cdn.kahvipatel.com") {
     throw new Error(`Unexpected asset origin: ${entry.url}`);
   }

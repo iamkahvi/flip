@@ -41,6 +41,22 @@ Pass a second argument to write to a different output path:
 node scripts/build.mjs manifest.json dist/index.html
 ```
 
+### Manifest overrides and asset validation
+
+The viewer resolves its runtime manifest in this order: a `manifest` URL query parameter, `localStorage["newsletter-image-viewer:manifest-url"]`, then the URL configured at build time. For example:
+
+```text
+https://viewer.example/?manifest=https%3A%2F%2Fcdn.example%2Fmanifest.json
+```
+
+To persist an override in the current browser, run this in its developer console and reload:
+
+```js
+localStorage.setItem("newsletter-image-viewer:manifest-url", "https://cdn.example/manifest.json")
+```
+
+Only `.avif`, `.gif`, `.jpeg`, `.jpg`, `.png`, `.svg`, and `.webp` assets are accepted. The build command rejects other types, and the viewer skips unsupported entries at runtime, so formats such as `.heic` are not shown.
+
 Production mode has no caption-editing controls; the manifest loaded at runtime is its source of truth.
 
 ### Caption mode

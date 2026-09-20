@@ -6,6 +6,7 @@ const [manifestSource = "manifest.json", outputPath = "index.html"] = process.ar
 const templatePath = new URL("../index.template.html", import.meta.url);
 const resolvedOutputPath = resolve(outputPath);
 const isRemoteManifest = /^https?:\/\//i.test(manifestSource);
+const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 
 async function readManifest(source) {
   if (/^https?:\/\//i.test(source)) {
@@ -33,6 +34,9 @@ for (const [index, entry] of manifest.entries()) {
   }
   if (typeof entry.url !== "string" || !/^https?:\/\//.test(entry.url)) {
     throw new Error(`Manifest entry ${index + 1} must have an HTTP(S) url`);
+  }
+  if (!supportedAssetExtensions.test(new URL(entry.url).pathname)) {
+    throw new Error(`Manifest entry ${index + 1} has an unsupported image type: ${entry.url}`);
   }
   if (Object.hasOwn(entry, "caption") && typeof entry.caption !== "string") {
     throw new Error(`Caption for ${entry.url} must be a string`);
