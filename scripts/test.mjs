@@ -1,19 +1,18 @@
 import { readFile } from "node:fs/promises";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
-const sourceManifest = JSON.parse(
-  await readFile(new URL("../manifest.json", import.meta.url), "utf8")
-);
 const template = await readFile(new URL("../index.template.html", import.meta.url), "utf8");
+const build = await readFile(new URL("./build.mjs", import.meta.url), "utf8");
 
 for (const marker of [
   "<style>",
   "object-fit: contain",
-  'const defaultManifestUrl = "manifest.json"',
+  "const defaultManifestUrl = null",
   "function configuredManifestUrl()",
   "function isSupportedAssetUrl(url)",
   "let assets = []",
-  "fetch(manifestUrl, { cache: \"no-store\" })",
+  'fetch(manifestUrl, { cache: "no-store" })',
+  'throw new Error("Set an HTTP(S) manifest URL")',
   "const captionMode = new URLSearchParams",
   "const localCaptions = captionMode ? loadCaptions() : {}",
   "let isEditingCaption = false",
@@ -45,6 +44,14 @@ if (html.includes("caption-button") || html.includes("caption-export") || html.i
   throw new Error("Caption mode must use only the inline text box");
 }
 
+for (const marker of [
+  "Build requires an HTTP(S) manifest URL",
+  "const response = await fetch(manifestUrl)",
+  "manifestUrl.href"
+]) {
+  if (!build.includes(marker)) throw new Error(`Missing ${marker} from scripts/build.mjs`);
+}
+
 const captionStyles = html.match(/\.caption \{(.*?)\n\}/s)?.[1];
 const captionTextStyles = html.match(/\.caption-text \{(.*?)\n\}/s)?.[1];
 const captionInputStyles = html.match(/\.caption-input \{(.*?)\n\}/s)?.[1];
@@ -70,36 +77,4 @@ for (const marker of ["padding: 0", "background: #fff", "field-sizing: content"]
   }
 }
 
-const manifestUrlMatch = html.match(/const defaultManifestUrl = (.*?);/);
-if (!manifestUrlMatch || JSON.parse(manifestUrlMatch[1]) !== "manifest.json") {
-  throw new Error("index.html must default to the local manifest.json at runtime");
-}
-if (!Array.isArray(sourceManifest) || sourceManifest.length === 0) {
-  throw new Error("manifest.json must be a non-empty array");
-}
-
-const urls = new Set();
-for (const [index, entry] of sourceManifest.entries()) {
-  if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-    throw new Error(`Manifest entry ${index + 1} must be an object`);
-  }
-  if (typeof entry.url !== "string" || urls.has(entry.url)) {
-    throw new Error(`Manifest entry ${index + 1} must have a unique URL`);
-  }
-  const parsed = new URL(entry.url);
-  if (!/\.(avif|gif|jpe?g|png|svg|webp)$/i.test(parsed.pathname)) {
-    throw new Error(`Unsupported manifest asset type: ${entry.url}`);
-  }
-  if (parsed.origin !== "https://cdn.kahvipatel.com") {
-    throw new Error(`Unexpected asset origin: ${entry.url}`);
-  }
-  if (!parsed.pathname.startsWith("/newsletter-assets/")) {
-    throw new Error(`Asset is outside newsletter-assets: ${entry.url}`);
-  }
-  if (Object.hasOwn(entry, "caption") && typeof entry.caption !== "string") {
-    throw new Error(`Caption for ${entry.url} must be a string`);
-  }
-  urls.add(entry.url);
-}
-
-console.log(`Validated a standalone viewer configured for ${sourceManifest.length} CDN image URLs.`);
+console.log("Validated the standalone flip viewer and its remote-manifest build configuration.");

@@ -189,6 +189,10 @@ function saveCaptions() {
 }
 
 async function loadManifest() {
+  if (typeof manifestUrl !== "string" || !/^https?:\/\//i.test(manifestUrl)) {
+    throw new Error("Set an HTTP(S) manifest URL");
+  }
+
   const response = await fetch(manifestUrl, { cache: "no-store" });
   if (!response.ok) throw new Error(`Could not load manifest: ${response.status} ${response.statusText}`);
 

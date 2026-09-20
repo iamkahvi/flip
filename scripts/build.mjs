@@ -1,28 +1,33 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, relative, resolve } from "node:path";
+import { resolve } from "node:path";
 
-const [manifestSource = "manifest.json", outputPath = "index.html"] = process.argv.slice(2);
+const [manifestSource, outputPath = "index.html"] = process.argv.slice(2);
 const templatePath = new URL("../index.template.html", import.meta.url);
-const resolvedOutputPath = resolve(outputPath);
-const isRemoteManifest = /^https?:\/\//i.test(manifestSource);
 const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 
-async function readManifest(source) {
-  if (/^https?:\/\//i.test(source)) {
-    const response = await fetch(source);
-    if (!response.ok) throw new Error(`Could not fetch ${source}: ${response.status} ${response.statusText}`);
-    return response.text();
-  }
-  if (source.startsWith("file:")) return readFile(new URL(source), "utf8");
-  return readFile(resolve(source), "utf8");
+if (!manifestSource) {
+  throw new Error("Build requires an HTTP(S) manifest URL");
+}
+
+let manifestUrl;
+try {
+  manifestUrl = new URL(manifestSource);
+} catch {
+  throw new Error("Build requires a valid HTTP(S) manifest URL");
+}
+if (!/^https?:$/.test(manifestUrl.protocol)) {
+  throw new Error("Build requires an HTTP(S) manifest URL");
 }
 
 let manifest;
 try {
-  manifest = JSON.parse(await readManifest(manifestSource));
+  const response = await fetch(manifestUrl);
+  if (!response.ok) {
+    throw new Error(`${response.status} ${response.statusText}`);
+  }
+  manifest = await response.json();
 } catch (error) {
-  throw new Error(`Could not read manifest ${manifestSource}: ${error.message}`);
+  throw new Error(`Could not read manifest ${manifestUrl.href}: ${error.message}`);
 }
 
 if (!Array.isArray(manifest)) {
@@ -33,7 +38,7 @@ for (const [index, entry] of manifest.entries()) {
     throw new Error(`Manifest entry ${index + 1} must be an object`);
   }
   if (typeof entry.url !== "string" || !/^https?:\/\//.test(entry.url)) {
-    throw new Error(`Manifest entry ${index + 1} must have an HTTP(S) url`);
+    throw new Error(`Manifest entry ${index + 1} must have an HTTP(S) URL`);
   }
   if (!supportedAssetExtensions.test(new URL(entry.url).pathname)) {
     throw new Error(`Manifest entry ${index + 1} has an unsupported image type: ${entry.url}`);
@@ -43,16 +48,13 @@ for (const [index, entry] of manifest.entries()) {
   }
 }
 
-const localManifestPath = manifestSource.startsWith("file:")
-  ? fileURLToPath(manifestSource)
-  : resolve(manifestSource);
-const manifestUrl = isRemoteManifest
-  ? manifestSource
-  : relative(dirname(resolvedOutputPath), localManifestPath).replaceAll("\\", "/") || "./";
 const template = await readFile(templatePath, "utf8");
 const placeholder = "__MANIFEST_URL__";
-if (!template.includes(placeholder)) throw new Error("Template is missing the manifest URL placeholder");
+if (!template.includes(placeholder)) {
+  throw new Error("Template is missing the manifest URL placeholder");
+}
 
-const html = template.replace(placeholder, JSON.stringify(manifestUrl));
+const resolvedOutputPath = resolve(outputPath);
+const html = template.replace(placeholder, JSON.stringify(manifestUrl.href));
 await writeFile(resolvedOutputPath, html);
-console.log(`Built ${resolvedOutputPath}; it will load ${manifestUrl} at runtime`);
+console.log(`Built ${resolvedOutputPath}; it will load ${manifestUrl.href} at runtime`);

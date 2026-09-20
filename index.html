@@ -138,7 +138,7 @@ const position = document.querySelector("#position");
 const caption = document.querySelector("#caption");
 const captionText = document.querySelector("#caption-text");
 const captionInput = document.querySelector("#caption-input");
-const defaultManifestUrl = "manifest.json";
+const defaultManifestUrl = null;
 const manifestStorageKey = "flip:manifest-url";
 const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 let assets = [];
@@ -189,6 +189,10 @@ function saveCaptions() {
 }
 
 async function loadManifest() {
+  if (typeof manifestUrl !== "string" || !/^https?:\/\//i.test(manifestUrl)) {
+    throw new Error("Set an HTTP(S) manifest URL");
+  }
+
   const response = await fetch(manifestUrl, { cache: "no-store" });
   if (!response.ok) throw new Error(`Could not load manifest: ${response.status} ${response.statusText}`);
 
