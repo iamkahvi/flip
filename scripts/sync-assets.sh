@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Refresh the inline R2 inventory in index.html. Requires the local rclone
-# `r2` remote to have permission to list the configured bucket.
+# Refresh manifest.json from the R2 inventory while retaining existing captions,
+# then build the standalone index.html.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,35 +12,41 @@ inventory="$(mktemp)"
 trap 'rm -f "$inventory"' EXIT
 
 rclone lsf --recursive --files-only "${R2_REMOTE}:${R2_BUCKET}/${R2_PREFIX}" > "$inventory"
-python3 - "$inventory" "${ROOT_DIR}/index.html" "$R2_PREFIX" "$CDN_BASE_URL" <<'PY'
-import datetime
+python3 - "$inventory" "${ROOT_DIR}/manifest.json" "$R2_PREFIX" "$CDN_BASE_URL" <<'PY'
 import json
-import re
 import sys
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
-inventory_path, html_path, prefix, base_url = sys.argv[1:]
+inventory_path, manifest_path, prefix, base_url = sys.argv[1:]
 image_extensions = {".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
+try:
+    previous_manifest = json.loads(Path(manifest_path).read_text())
+except (OSError, json.JSONDecodeError) as error:
+    raise SystemExit(f"Could not read {manifest_path}: {error}")
+if not isinstance(previous_manifest, list):
+    raise SystemExit("manifest.json must be an array")
+
+captions = {
+    entry["url"]: entry["caption"]
+    for entry in previous_manifest
+    if isinstance(entry, dict)
+    and isinstance(entry.get("url"), str)
+    and isinstance(entry.get("caption"), str)
+}
 keys = Path(inventory_path).read_text().splitlines()
-assets = [
-    f"{base_url.rstrip('/')}/{quote(prefix.strip('/') + '/' + key, safe='/')}"
-    for key in keys
-    if PurePosixPath(key).suffix.lower() in image_extensions
-]
-html = Path(html_path).read_text()
-replacement = f"const assets = {json.dumps(assets, indent=2)};"
-updated, replacements = re.subn(
-    r"const assets = \[.*?\];",
-    replacement,
-    html,
-    count=1,
-    flags=re.DOTALL,
-)
-if replacements != 1:
-    raise SystemExit("Could not find the inline asset inventory in index.html")
-Path(html_path).write_text(updated)
-print(f"Updated {html_path} with {len(assets)} image URLs at {datetime.datetime.now(datetime.timezone.utc).isoformat()}")
+manifest = []
+for key in keys:
+    if PurePosixPath(key).suffix.lower() not in image_extensions:
+        continue
+    url = f"{base_url.rstrip('/')}/{quote(prefix.strip('/') + '/' + key, safe='/')}"
+    entry = {"url": url}
+    if url in captions:
+        entry["caption"] = captions[url]
+    manifest.append(entry)
+
+Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+print(f"Updated {manifest_path} with {len(manifest)} image URLs")
 PY
 
-node "${ROOT_DIR}/scripts/sync-manifest.mjs"
+node "${ROOT_DIR}/scripts/build.mjs" "${ROOT_DIR}/manifest.json" "${ROOT_DIR}/index.html"
