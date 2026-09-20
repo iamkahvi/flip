@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "python3 -m http.server 8000",
     "sync-assets": "bash scripts/sync-assets.sh",
+    "sync-captions": "bash scripts/sync-captions.sh",
+    "sync-manifest": "node scripts/sync-manifest.mjs",
     "test": "node scripts/test.mjs"
   }
 }

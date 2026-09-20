@@ -42,3 +42,5 @@ if replacements != 1:
 Path(html_path).write_text(updated)
 print(f"Updated {html_path} with {len(assets)} image URLs at {datetime.datetime.now(datetime.timezone.utc).isoformat()}")
 PY
+
+node "${ROOT_DIR}/scripts/sync-manifest.mjs"

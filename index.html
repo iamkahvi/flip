@@ -8,8 +8,7 @@
     <style>
 :root {
   color-scheme: dark;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", monospace;
+  font-family: monospace;
   background: #111;
   color: #f4f4f4;
 }
@@ -27,12 +26,20 @@ body {
 
 .viewer {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100vw;
   width: 100dvw;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
   background: #111;
+}
+
+.image-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .image {
@@ -46,6 +53,60 @@ body {
   object-fit: contain;
 }
 
+.caption {
+  position: absolute;
+  z-index: 1;
+  bottom: 0;
+  left: 0;
+  width: fit-content;
+  max-width: min(90vw, 120ch);
+  color: #111;
+}
+
+.caption[hidden] {
+  display: none;
+}
+
+.caption-text {
+  display: inline;
+  margin: 0;
+  background: #fff;
+  font-size: clamp(1rem, 2vw, 1.75rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.caption-input {
+  display: block;
+  width: fit-content;
+  max-width: min(90vw, 120ch);
+  min-width: 1ch;
+  min-height: 1.2em;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  color: #111;
+  field-sizing: content;
+  resize: none;
+  overflow: hidden;
+  font: inherit;
+  font-size: clamp(1rem, 2vw, 1.75rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.caption-input[hidden] {
+  display: none;
+}
+
+.caption-input:focus {
+  outline: 1px solid #111;
+  outline-offset: -1px;
+}
+
 .position {
   position: fixed;
   z-index: 1;
@@ -56,17 +117,27 @@ body {
   line-height: 1;
   text-shadow: 0 1px 3px #000;
 }
+
     </style>
   </head>
   <body>
-    <main class="viewer" aria-label="Newsletter asset viewer">
-      <img id="image" class="image" alt="" />
+    <main id="viewer" class="viewer" aria-label="Newsletter asset viewer">
+      <div class="image-stage">
+        <img id="image" class="image" alt="" />
+      </div>
+      <section id="caption" class="caption" aria-label="Image subtitle" hidden>
+        <p id="caption-text" class="caption-text"></p>
+        <textarea id="caption-input" class="caption-input" aria-label="Subtitle for this image" hidden></textarea>
+      </section>
       <p id="position" class="position" aria-live="polite"></p>
     </main>
     <script>
+const viewer = document.querySelector("#viewer");
 const image = document.querySelector("#image");
 const position = document.querySelector("#position");
-
+const caption = document.querySelector("#caption");
+const captionText = document.querySelector("#caption-text");
+const captionInput = document.querySelector("#caption-input");
 const assets = [
   "https://cdn.kahvipatel.com/newsletter-assets/102515862-img-001.png",
   "https://cdn.kahvipatel.com/newsletter-assets/102515862-img-002.png",
@@ -381,7 +452,53 @@ const assets = [
   "https://cdn.kahvipatel.com/newsletter-assets/covers/211146190-cover-001.jpg",
   "https://cdn.kahvipatel.com/newsletter-assets/covers/96747426-cover-001.jpg"
 ];
+const captions = {
+  "https://cdn.kahvipatel.com/newsletter-assets/102515862-img-001.png": "my server homepage! (when you're not on my tailnet)",
+  "https://cdn.kahvipatel.com/newsletter-assets/108898260-img-003.jpg": "ferry to santa teresa",
+  "https://cdn.kahvipatel.com/newsletter-assets/108898260-img-007.jpg": "man what a sunset",
+  "https://cdn.kahvipatel.com/newsletter-assets/135162719-img-003.jpg": "ash with satish :)",
+  "https://cdn.kahvipatel.com/newsletter-assets/135162719-img-005.jpg": "this was when we were in montreal (ashley's first time) and it was very HOT",
+  "https://cdn.kahvipatel.com/newsletter-assets/144316141-img-002.jpg": "wow the civic 😍 i loved this car because it was so small and fast",
+  "https://cdn.kahvipatel.com/newsletter-assets/151438638-img-008.jpg": "me and ash in greece",
+  "https://cdn.kahvipatel.com/newsletter-assets/188065771-missing-003.png": "penny so tiny",
+  "https://cdn.kahvipatel.com/newsletter-assets/194373639-missing-011.jpg": "well she's just the cutest dog in the world"
+};
+const captionMode = new URLSearchParams(window.location.search).get("mode") === "caption";
+const captionsStorageKey = "newsletter-image-viewer:captions";
+const localCaptions = captionMode ? loadCaptions() : {};
 let currentIndex = 0;
+let isEditingCaption = false;
+
+function loadCaptions() {
+  try {
+    const savedCaptions = JSON.parse(localStorage.getItem(captionsStorageKey));
+    return savedCaptions && typeof savedCaptions === "object" && !Array.isArray(savedCaptions)
+      ? savedCaptions
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveCaptions() {
+  try {
+    localStorage.setItem(captionsStorageKey, JSON.stringify(localCaptions));
+  } catch {
+    // Caption mode still works until the page is reloaded if browser storage is unavailable.
+  }
+}
+
+function currentCaption() {
+  return currentCaptionFor(assets[currentIndex]);
+}
+
+function renderCaption() {
+  const text = currentCaption();
+  captionText.textContent = text;
+  captionText.hidden = captionMode && isEditingCaption;
+  captionInput.hidden = !captionMode || !isEditingCaption;
+  caption.hidden = captionMode ? !isEditingCaption && text.length === 0 : text.length === 0;
+}
 
 function indexFromHash() {
   const position = Number.parseInt(window.location.hash.slice(1), 10);
@@ -409,6 +526,8 @@ function render() {
   image.alt = assetName;
   image.src = assetUrl;
   position.textContent = `${currentIndex + 1} / ${assets.length}`;
+  if (captionMode) captionInput.value = currentCaption();
+  renderCaption();
   updateHash();
 
   preload(currentIndex - 1);
@@ -429,17 +548,82 @@ function toggleFullscreen() {
   }
 }
 
+function saveCurrentCaption() {
+  if (!captionMode) return;
+  localCaptions[assets[currentIndex]] = captionInput.value.trim();
+  saveCaptions();
+}
+
+function startCaptionEditing() {
+  if (!captionMode) return;
+  isEditingCaption = true;
+  captionInput.value = currentCaption();
+  renderCaption();
+  captionInput.focus();
+}
+
+function imagePath(assetUrl) {
+  return decodeURIComponent(new URL(assetUrl).pathname.slice("/newsletter-assets/".length));
+}
+
+function exportCaptions() {
+  const exportedCaptions = {};
+  for (const assetUrl of assets) {
+    const text = currentCaptionFor(assetUrl).trim();
+    if (text) exportedCaptions[imagePath(assetUrl)] = text;
+  }
+
+  const blob = new Blob([`${JSON.stringify(exportedCaptions, null, 2)}\n`], {
+    type: "application/json"
+  });
+  const download = document.createElement("a");
+  download.href = URL.createObjectURL(blob);
+  download.download = "captions.json";
+  download.click();
+  URL.revokeObjectURL(download.href);
+}
+
+function currentCaptionFor(assetUrl) {
+  if (captionMode && Object.hasOwn(localCaptions, assetUrl)) {
+    return localCaptions[assetUrl];
+  }
+  return captions[assetUrl] || "";
+}
+
+
 image.addEventListener("error", () => {
   console.error(`Could not load ${image.src}`);
 });
 
+viewer.addEventListener("pointerdown", (event) => {
+  if (captionMode) return;
+  goTo(event.clientX < window.innerWidth / 2 ? currentIndex - 1 : currentIndex + 1);
+});
+
 window.addEventListener("keydown", (event) => {
+  if (captionMode && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+    event.preventDefault();
+    saveCurrentCaption();
+    exportCaptions();
+    return;
+  }
   if (event.altKey || event.ctrlKey || event.metaKey) return;
 
-  if (event.key === "ArrowLeft") {
+  if (event.target === captionInput) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      saveCurrentCaption();
+      isEditingCaption = false;
+      captionInput.blur();
+      renderCaption();
+    }
+    return;
+  }
+
+  if (event.key === "ArrowLeft" || event.key.toLowerCase() === "h") {
     event.preventDefault();
     goTo(currentIndex - 1);
-  } else if (event.key === "ArrowRight") {
+  } else if (event.key === "ArrowRight" || event.key.toLowerCase() === "l") {
     event.preventDefault();
     goTo(currentIndex + 1);
   } else if (event.key === "Home") {
@@ -450,6 +634,9 @@ window.addEventListener("keydown", (event) => {
     goTo(assets.length - 1);
   } else if (event.key.toLowerCase() === "f") {
     toggleFullscreen();
+  } else if (captionMode && event.key.toLowerCase() === "c") {
+    event.preventDefault();
+    startCaptionEditing();
   }
 });
 
