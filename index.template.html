@@ -138,13 +138,9 @@ const position = document.querySelector("#position");
 const caption = document.querySelector("#caption");
 const captionText = document.querySelector("#caption-text");
 const captionInput = document.querySelector("#caption-input");
-const manifest = __MANIFEST__;
-const assets = manifest.map((entry) => entry.url);
-const captions = Object.fromEntries(
-  manifest
-    .filter((entry) => Object.hasOwn(entry, "caption"))
-    .map(({ url, caption }) => [url, caption])
-);
+const manifestUrl = __MANIFEST_URL__;
+let assets = [];
+let captions = {};
 const captionMode = new URLSearchParams(window.location.search).get("mode") === "caption";
 const captionsStorageKey = "newsletter-image-viewer:captions";
 const localCaptions = captionMode ? loadCaptions() : {};
@@ -168,6 +164,30 @@ function saveCaptions() {
   } catch {
     // Caption mode still works until the page is reloaded if browser storage is unavailable.
   }
+}
+
+async function loadManifest() {
+  const response = await fetch(manifestUrl, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Could not load manifest: ${response.status} ${response.statusText}`);
+
+  const manifest = await response.json();
+  if (!Array.isArray(manifest)) throw new Error("Manifest must be an array");
+
+  const nextAssets = [];
+  const nextCaptions = {};
+  for (const [index, entry] of manifest.entries()) {
+    if (!entry || typeof entry !== "object" || typeof entry.url !== "string") {
+      throw new Error(`Invalid manifest entry ${index + 1}`);
+    }
+    if (Object.hasOwn(entry, "caption") && typeof entry.caption !== "string") {
+      throw new Error(`Invalid caption for manifest entry ${index + 1}`);
+    }
+    nextAssets.push(entry.url);
+    if (Object.hasOwn(entry, "caption")) nextCaptions[entry.url] = entry.caption;
+  }
+
+  assets = nextAssets;
+  captions = nextCaptions;
 }
 
 function currentCaption() {
@@ -327,12 +347,22 @@ window.addEventListener("hashchange", () => {
   }
 });
 
-if (assets.length === 0) {
-  position.textContent = "No images in the inventory";
-} else {
-  currentIndex = indexFromHash();
-  render();
+async function initialize() {
+  try {
+    await loadManifest();
+    if (assets.length === 0) {
+      position.textContent = "No images in the manifest";
+    } else {
+      currentIndex = indexFromHash();
+      render();
+    }
+  } catch (error) {
+    console.error(error);
+    position.textContent = "Could not load image manifest";
+  }
 }
+
+initialize();
     </script>
   </body>
 </html>

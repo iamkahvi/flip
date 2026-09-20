@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Refresh manifest.json from the R2 inventory while retaining existing captions,
-# then build the standalone index.html.
+# Refresh manifest.json from the R2 inventory while retaining existing captions.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -48,5 +47,3 @@ for key in keys:
 Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
 print(f"Updated {manifest_path} with {len(manifest)} image URLs")
 PY
-
-node "${ROOT_DIR}/scripts/build.mjs" "${ROOT_DIR}/manifest.json" "${ROOT_DIR}/index.html"

@@ -9,8 +9,9 @@ const template = await readFile(new URL("../index.template.html", import.meta.ur
 for (const marker of [
   "<style>",
   "object-fit: contain",
-  "const manifest = [",
-  "const assets = manifest.map",
+  'const manifestUrl = "manifest.json"',
+  "let assets = []",
+  "fetch(manifestUrl, { cache: \"no-store\" })",
   "const captionMode = new URLSearchParams",
   "const localCaptions = captionMode ? loadCaptions() : {}",
   "let isEditingCaption = false",
@@ -32,8 +33,8 @@ for (const marker of [
   if (!html.includes(marker)) throw new Error(`Missing ${marker} from index.html`);
 }
 
-if (!template.includes("__MANIFEST__")) {
-  throw new Error("index.template.html must include the manifest placeholder");
+if (!template.includes("__MANIFEST_URL__")) {
+  throw new Error("index.template.html must include the manifest URL placeholder");
 }
 if (html.includes('src="app.js"') || html.includes('href="styles.css"')) {
   throw new Error("index.html must not depend on external application files");
@@ -67,14 +68,12 @@ for (const marker of ["padding: 0", "background: #fff", "field-sizing: content"]
   }
 }
 
-const inlineManifestMatch = html.match(/const manifest = (\[.*?\]);\nconst assets/s);
-if (!inlineManifestMatch) throw new Error("Could not parse the inline manifest");
-const inlineManifest = JSON.parse(inlineManifestMatch[1]);
+const manifestUrlMatch = html.match(/const manifestUrl = (.*?);/);
+if (!manifestUrlMatch || JSON.parse(manifestUrlMatch[1]) !== "manifest.json") {
+  throw new Error("index.html must load the local manifest.json at runtime");
+}
 if (!Array.isArray(sourceManifest) || sourceManifest.length === 0) {
   throw new Error("manifest.json must be a non-empty array");
-}
-if (JSON.stringify(inlineManifest) !== JSON.stringify(sourceManifest)) {
-  throw new Error("index.html is not built from the current manifest.json");
 }
 
 const urls = new Set();
@@ -98,4 +97,4 @@ for (const [index, entry] of sourceManifest.entries()) {
   urls.add(entry.url);
 }
 
-console.log(`Validated a self-contained viewer with ${sourceManifest.length} CDN image URLs.`);
+console.log(`Validated a standalone viewer configured for ${sourceManifest.length} CDN image URLs.`);
