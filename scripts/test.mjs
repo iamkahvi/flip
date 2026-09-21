@@ -80,4 +80,4 @@ for (const marker of ["display: inline", "background: #fff"]) {
     throw new Error(`Caption text must supply its own white background: ${marker}`);
   }
 }
-console.log("Validated the standalone flip viewer and its remote-manifest build configuration.");
+console.log("Validated the standalone flipbook viewer and its remote-manifest build configuration.");

@@ -92,7 +92,7 @@ body {
     </style>
   </head>
   <body>
-    <main id="viewer" class="viewer" aria-label="flip image viewer">
+    <main id="viewer" class="viewer" aria-label="flipbook image viewer">
       <div class="image-stage">
         <img id="image" class="image" alt="" />
       </div>
@@ -109,7 +109,7 @@ const caption = document.querySelector("#caption");
 const captionText = document.querySelector("#caption-text");
 const defaultManifestUrl = __MANIFEST_URL__;
 const defaultPageTitle = "flipbook";
-const manifestStorageKey = "flip:manifest-url";
+const manifestStorageKey = "flipbook:manifest-url";
 const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 let assets = [];
 let captions = {};

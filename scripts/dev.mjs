@@ -18,4 +18,4 @@ const server = Bun.serve({
   }
 });
 
-console.log(`flip is available at ${server.url}`);
+console.log(`flipbook is available at ${server.url}`);
