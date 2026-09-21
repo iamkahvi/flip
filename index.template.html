@@ -243,7 +243,7 @@ image.addEventListener("error", () => {
   console.error(`Could not load ${image.src}`);
 });
 
-viewer.addEventListener("pointerdown", (event) => {
+viewer.addEventListener("click", (event) => {
   goTo(event.clientX < window.innerWidth / 2 ? currentIndex - 1 : currentIndex + 1);
 });
 

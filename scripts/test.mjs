@@ -22,7 +22,7 @@ for (const marker of [
   "document.title = manifestTitle;",
   'event.key.toLowerCase() === "h"',
   'event.key.toLowerCase() === "l"',
-  'viewer.addEventListener("pointerdown"',
+  'viewer.addEventListener("click"',
   "event.clientX < window.innerWidth / 2",
   ".caption[hidden]",
   "font-size: clamp(1rem, 2vw, 1.75rem)",
