@@ -209,7 +209,6 @@ function render() {
   const assetUrl = assets[currentIndex];
   const assetName = decodeURIComponent(new URL(assetUrl).pathname.split("/").pop());
 
-  image.removeAttribute("src");
   image.alt = assetName;
   image.src = assetUrl;
   position.textContent = `${currentIndex + 1} / ${assets.length}`;
@@ -243,7 +242,7 @@ image.addEventListener("error", () => {
   console.error(`Could not load ${image.src}`);
 });
 
-viewer.addEventListener("click", (event) => {
+viewer.addEventListener("pointerdown", (event) => {
   goTo(event.clientX < window.innerWidth / 2 ? currentIndex - 1 : currentIndex + 1);
 });
 
