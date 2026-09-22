@@ -16,6 +16,11 @@ for (const marker of [
   "function isSupportedAssetUrl(url)",
   "let assets = []",
   'fetch(manifestUrl, { cache: "no-store" })',
+  "function srcsetFor(asset)",
+  "function applyPreviewSource(target, asset)",
+  "preloadImage.decode()",
+  "const preloadAhead = 2",
+  "const preloadBehind = 1",
   'throw new Error("Set an HTTP(S) manifest URL")',
   'throw new Error("Manifest title must be a string")',
   "for (const [index, entry] of manifest.images.entries())",
@@ -23,7 +28,9 @@ for (const marker of [
   'event.key.toLowerCase() === "h"',
   'event.key.toLowerCase() === "l"',
   'viewer.addEventListener("pointerdown"',
-  "event.clientX < window.innerWidth / 2",
+  "const edgeTapFraction = 1 / 3",
+  "horizontalPosition < edgeTapFraction",
+  "horizontalPosition > 1 - edgeTapFraction",
   ".caption[hidden]",
   "font-size: clamp(1rem, 2vw, 1.75rem)",
   "font-family: monospace",
@@ -57,6 +64,8 @@ for (const marker of [
   'throw new Error("Manifest title must be a string")',
   "for (const [index, entry] of manifest.images.entries())",
   "const response = await fetch(manifestUrl)",
+  "function isSupportedAssetUrl(url)",
+  "Srcset for ${entry.url} must be an array",
   "manifestUrl.href"
 ]) {
   if (!build.includes(marker)) throw new Error(`Missing ${marker} from scripts/build.mjs`);

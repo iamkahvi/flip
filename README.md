@@ -14,7 +14,7 @@ flipbook requires only [Bun](https://bun.sh/). Bun builds `index.html`, runs the
 
 The image list is a JSON manifest at an HTTP or HTTPS URL. This URL is the source of truth for flipbook.
 
-The manifest can be an object containing an `images` array, as shown below, or the image array itself. An object manifest can also contain a title. flipbook uses the title for the browser page title. If the manifest has no title—or is a bare array—flipbook uses `flipbook`. Each image item must have an HTTP or HTTPS image URL. An item can also have a caption.
+The manifest can be an object containing an `images` array, as shown below, or the image array itself. An object manifest can also contain a title. flipbook uses the title for the browser page title. If the manifest has no title—or is a bare array—flipbook uses `flipbook`. Each image item must have an HTTP or HTTPS image URL. An item can also have a caption. For faster display, it can provide a small preview and a width-qualified `srcset` of responsive derivatives.
 
 ```json
 {
@@ -41,6 +41,27 @@ Use only these image types:
 - WebP
 
 flipbook ignores unsupported items when it loads a manifest.
+
+### Responsive images and previews
+
+`url` remains the required fallback image. Add `preview` and `srcset` to avoid downloading a large original before the viewer can show anything. `preview` should be a small image of the same content. `srcset` candidates must be the same image at strictly increasing pixel widths, preferably encoded as AVIF or WebP.
+
+```json
+{
+  "url": "https://images.example.com/photos/beach-original.jpg",
+  "preview": "https://images.example.com/photos/beach-preview.webp",
+  "srcset": [
+    { "url": "https://images.example.com/photos/beach-960.avif", "width": 960 },
+    { "url": "https://images.example.com/photos/beach-1600.avif", "width": 1600 },
+    { "url": "https://images.example.com/photos/beach-2560.avif", "width": 2560 }
+  ],
+  "caption": "Caption text"
+}
+```
+
+The viewer selects an appropriate `srcset` candidate for the viewport and device pixel ratio. It displays `preview` while the selected full image is loading and decoding. Without these optional fields, it continues to load `url` exactly as before.
+
+Generate and host the derivative files before publishing the manifest. flipbook does not resize a remote original in the browser or upload files to an image service.
 
 In normal mode, flipbook reads captions from the manifest. It does not provide controls to change them.
 
@@ -110,8 +131,9 @@ Use these controls in normal mode:
 
 | Action | Control |
 | --- | --- |
-| Show the previous image | Left Arrow, `H`, or tap the left half of the screen |
-| Show the next image | Right Arrow, `L`, or tap the right half of the screen |
+| Show the previous image | Left Arrow, `H`, or tap the left third of the screen |
+| Show the next image | Right Arrow, `L`, or tap the right third of the screen |
+| Use the browser image menu | Press and hold the middle third of the image |
 | Show the first image | `Home` |
 | Show the last image | `End` |
 | Enter or leave full-screen mode | `F` |

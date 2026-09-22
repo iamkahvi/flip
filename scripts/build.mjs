@@ -2,6 +2,15 @@ const [manifestSource, outputPath = "index.html"] = process.argv.slice(2);
 const templatePath = new URL("../index.template.html", import.meta.url);
 const supportedAssetExtensions = /\.(avif|gif|jpe?g|png|svg|webp)$/i;
 
+function isSupportedAssetUrl(url) {
+  try {
+    return typeof url === "string" && /^https?:\/\//.test(url)
+      && supportedAssetExtensions.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
 if (!manifestSource) {
   throw new Error("Build requires an HTTP(S) manifest URL");
 }
@@ -41,14 +50,28 @@ for (const [index, entry] of manifest.images.entries()) {
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     throw new Error(`Manifest entry ${index + 1} must be an object`);
   }
-  if (typeof entry.url !== "string" || !/^https?:\/\//.test(entry.url)) {
-    throw new Error(`Manifest entry ${index + 1} must have an HTTP(S) URL`);
-  }
-  if (!supportedAssetExtensions.test(new URL(entry.url).pathname)) {
-    throw new Error(`Manifest entry ${index + 1} has an unsupported image type: ${entry.url}`);
+  if (!isSupportedAssetUrl(entry.url)) {
+    throw new Error(`Manifest entry ${index + 1} must have a supported HTTP(S) image URL`);
   }
   if (Object.hasOwn(entry, "caption") && typeof entry.caption !== "string") {
     throw new Error(`Caption for ${entry.url} must be a string`);
+  }
+  if (Object.hasOwn(entry, "preview") && !isSupportedAssetUrl(entry.preview)) {
+    throw new Error(`Preview for ${entry.url} must be a supported HTTP(S) image URL`);
+  }
+  if (Object.hasOwn(entry, "srcset")) {
+    if (!Array.isArray(entry.srcset)) {
+      throw new Error(`Srcset for ${entry.url} must be an array`);
+    }
+    let previousWidth = 0;
+    for (const candidate of entry.srcset) {
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)
+        || !isSupportedAssetUrl(candidate.url)
+        || !Number.isSafeInteger(candidate.width) || candidate.width <= previousWidth) {
+        throw new Error(`Invalid srcset candidate for ${entry.url}`);
+      }
+      previousWidth = candidate.width;
+    }
   }
 }
 
