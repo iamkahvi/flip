@@ -34,7 +34,13 @@ for (const marker of [
   ".caption[hidden]",
   "font-size: clamp(1rem, 2vw, 1.75rem)",
   "font-family: monospace",
-  "captionText.textContent = text"
+  "captionText.textContent = text",
+  'id="loading"',
+  "Arc from loading.dev",
+  "function setLoading(isLoading)",
+  "setLoading(true);",
+  "setLoading(false);",
+  "pointer-events: none"
 ]) {
   if (!html.includes(marker)) throw new Error(`Missing ${marker} from index.html`);
 }
